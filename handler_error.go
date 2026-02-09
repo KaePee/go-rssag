@@ -3,5 +3,5 @@ package main
 import "net/http"
 
 func handleErr(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, 400, "Something Went Wrong")
+	respondWithError(w, http.StatusBadRequest, "Something Went Wrong")
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/KaePee/go-rssag/internal/auth"
 	db "github.com/KaePee/go-rssag/internal/database"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -32,8 +33,22 @@ func (apiCfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request
 	})
 
 	if err != nil {
-		respondWithError(w, 500, fmt.Sprintf("couldn't create user: %v", err))
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("couldn't create user: %v", err))
 		return
 	}
-	respondWithJSON(w, 200, databaseUserToUser(user))
+	respondWithJSON(w, http.StatusCreated, databaseUserToUser(user))
+}
+
+func (apiCfg *apiConfig) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	apiKey, err := auth.GetApiKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusForbidden, fmt.Sprintf("Authentication error: %v", err))
+	}
+
+	user, err := apiCfg.DB.GetUserByApiKey(r.Context(), apiKey)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("could not get user: %v", err))
+		return
+	}
+	respondWithJSON(w, http.StatusOK, databaseUserToUser(user))
 }
