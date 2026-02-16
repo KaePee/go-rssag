@@ -17,6 +17,7 @@ import (
 type apiConfig struct {
 	DB *db.Queries
 }
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -57,11 +58,19 @@ func main() {
 	v1Router.Get("/err", handleErr)
 	v1Router.Post("/users", apiCfg.handleCreateUser)
 	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.handleGetUser))
+	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handleCreateFeed))
+	v1Router.Get("/feeds", apiCfg.handlerGetFeeds)
+	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.handleCreateFeedFollow))
+	v1Router.Get("/feed_follows", apiCfg.middlewareAuth(apiCfg.handleGetFeedFollows))
+	v1Router.Delete("/feed_follows/{feedFollowID}", apiCfg.middlewareAuth(apiCfg.handleDeleteFeedFollow))
 
 	r.Mount("/v1", v1Router)
 
 	fmt.Printf("starting http server on port: %v", portString)
-	log.Fatal(http.ListenAndServe(":"+portString, r))
+	err = http.ListenAndServe(":" + portString, r)
+	if err != nil {
+		log.Fatalf("Error starting http server: %v", err)
+	}
 	//OR use the deference of http.Server
 	// srv := &http.Server{
 	// 	Addr:    ":" + portString,
