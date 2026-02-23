@@ -6,11 +6,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	db "github.com/KaePee/go-rssag/internal/database"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
@@ -34,17 +35,22 @@ func main() {
 	}
 
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dbUrl)
+	pool, err := pgxpool.New(ctx, dbUrl)
 	if err != nil {
 		log.Fatal("❌Cannot connect to database", err)
 	}
-	defer conn.Close(ctx)
+	defer pool.Close()
 
-	queries := db.New(conn)
+	queries := db.New(pool)
 
 	apiCfg := apiConfig{
 		DB: queries,
 	}
+
+	//go routine for scraper
+	go startScraper(
+		queries, 10, time.Minute,
+	)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -54,10 +60,13 @@ func main() {
 	})
 
 	v1Router := chi.NewRouter()
-	v1Router.Get("/healthz", handleReady)
+	v1Router.Get("/health", handleReady)
 	v1Router.Get("/err", handleErr)
+
 	v1Router.Post("/users", apiCfg.handleCreateUser)
 	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.handleGetUser))
+	v1Router.Get("/posts", apiCfg.middlewareAuth(apiCfg.handleGetPostsForUser))
+
 	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handleCreateFeed))
 	v1Router.Get("/feeds", apiCfg.handlerGetFeeds)
 	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.handleCreateFeedFollow))
@@ -67,7 +76,7 @@ func main() {
 	r.Mount("/v1", v1Router)
 
 	fmt.Printf("starting http server on port: %v", portString)
-	err = http.ListenAndServe(":" + portString, r)
+	err = http.ListenAndServe(":"+portString, r)
 	if err != nil {
 		log.Fatalf("Error starting http server: %v", err)
 	}

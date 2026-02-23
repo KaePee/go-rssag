@@ -40,6 +40,17 @@ type FeedFollow struct {
 	FeedId    pgtype.UUID      `json:"feed_id"`
 }
 
+type Post struct {
+	ID          pgtype.UUID      `json:"id"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+	Title       string           `json:"title"`
+	Description *string          `json:"description"`
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+	Url         string           `json:"url"`
+	FeedID      pgtype.UUID      `json:"feed_id"`
+}
+
 func databaseFeedtoFeed(dbFeed db.Feed) Feed {
 	return Feed{
 		ID:        dbFeed.ID,
@@ -77,4 +88,29 @@ func databaseFeedsFollowstoFeedsFollows(dbFeedFollows []db.FeedFollow) []FeedFol
 		feedFollows = append(feedFollows, databaseFeedFollowToFeedFollow(dbFeedFollow))
 	}
 	return feedFollows
+}
+
+func databasePostToPost(dbPost db.Post) Post {
+	var description *string
+	if dbPost.Description.Valid {
+		description = &dbPost.Description.String
+	}
+	return Post{
+		ID:          dbPost.ID,
+		CreatedAt:   dbPost.CreatedAt,
+		UpdatedAt:   dbPost.UpdatedAt,
+		Title:       dbPost.Title,
+		Description: description,
+		PublishedAt: dbPost.PublishedAt,
+		Url:         dbPost.Url,
+		FeedID:      dbPost.FeedID,
+	}
+}
+
+func databasePostsToPosts(dbPosts []db.Post) []Post {
+	posts := []Post{}
+	for _, dbPost := range dbPosts {
+		posts = append(posts, databasePostToPost(dbPost))
+	}
+	return posts
 }
