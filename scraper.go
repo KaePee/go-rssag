@@ -43,15 +43,15 @@ func scrapeFeed(queries *db.Queries, wg *sync.WaitGroup, feed db.Feed) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err := queries.MarkFeedAsFetched(ctx, feed.ID)
-	if err != nil {
-		log.Println("error marking feed as fetched:", err)
-		return
-	}
-
 	rssFeed, err := urlToFeed(feed.Url.String)
 	if err != nil {
 		log.Println("error fetching feed:", err)
+		return
+	}
+
+	_, err = queries.MarkFeedAsFetched(ctx, feed.ID)
+	if err != nil {
+		log.Println("error marking feed as fetched:", err)
 		return
 	}
 
